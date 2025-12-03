@@ -6,24 +6,31 @@
     <title>Lottie Color Editor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <style>
+    <style is:inline>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }
+        html {
+            block-size: 100%;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0f0f0f;
             color: #e0e0e0;
+            margin: 0;
+            padding: 0;
             min-height: 100vh;
-            padding: 2rem;
+            overflow-y: auto;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
         }
 
         h1 {
@@ -186,36 +193,88 @@
             border-color: #3b82f6;
         }
 
-        .palette-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 1rem;
-        }
-
-        .color-item {
-            background: #252525;
-            border-radius: 8px;
-            padding: 0.75rem;
+        .slider-group {
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
         }
 
+        .slider-group label {
+            font-size: 0.75rem;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slider-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+        }
+
+        .slider-group input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-value {
+            font-family: 'SF Mono', Monaco, monospace;
+            color: #fff;
+            font-size: 0.75rem;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+
+        .color-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            background: #1a1a1a;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #252525;
+        }
+
         .color-preview-row {
             display: flex;
-            align-items: center;
-            gap: 0.75rem;
+            align-items: stretch;
+            gap: 0.5rem;
         }
 
         .color-swatch {
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             border-radius: 6px;
-            border: 2px solid #444;
+            border: 1px solid #333;
             cursor: pointer;
             position: relative;
             overflow: hidden;
             flex-shrink: 0;
+            transition: border-color 0.2s;
         }
 
         .color-swatch::before {
@@ -246,20 +305,42 @@
         .color-info {
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            gap: 0.5rem;
             flex: 1;
             min-width: 0;
         }
 
-        .color-hex {
+        .color-hex-input {
             font-family: 'SF Mono', Monaco, monospace;
-            font-size: 0.75rem;
-            color: #aaa;
+            font-size: 0.8rem;
+            background: #0f0f0f;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            padding: 0.625rem;
+            border-radius: 6px;
+            width: 100%;
+            height: 48px;
+            transition: border-color 0.2s, background 0.2s;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .color-hex-input:hover {
+            background: #151515;
+            border-color: #444;
+        }
+
+        .color-hex-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: #151515;
         }
 
         .color-count {
             font-size: 0.7rem;
             color: #666;
+            text-align: center;
+            margin-top: 0.125rem;
         }
 
         .color-picker-wrapper {
@@ -409,13 +490,35 @@
                     <button class="secondary" id="restartBtn">Restart</button>
                     <div class="bg-toggle" style="margin-left: auto;">
                         <span>Transparency grid</span>
-                        <div class="toggle-switch" id="bgToggle"></div>
+                        <div class="toggle-switch active" id="bgToggle"></div>
                     </div>
                 </div>
             </div>
 
             <div class="palette-panel">
-                
+
+                <!-- Global Color Adjustments -->
+                <div>
+                    <div class="section-header">Global Color Adjustments</div>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="slider-group">
+                            <label>
+                                <span>Hue Shift</span>
+                                <span class="slider-value" id="hueValue">0°</span>
+                            </label>
+                            <input type="range" id="hueSlider" min="-180" max="180" value="0" step="1">
+                        </div>
+                        <div class="slider-group">
+                            <label>
+                                <span>Saturation</span>
+                                <span class="slider-value" id="saturationValue">100%</span>
+                            </label>
+                            <input type="range" id="saturationSlider" min="0" max="200" value="100" step="1">
+                        </div>
+                        <button class="secondary small" id="resetAdjustmentsBtn">Reset Adjustments</button>
+                    </div>
+                </div>
+
                 <!-- Resize Section -->
                 <div>
                     <div class="section-header">Dimensions & Crop</div>
@@ -461,7 +564,9 @@
         let lottieAnimation = null;
         let originalFileName = 'animation';
         let colorMap = new Map(); // Maps hex color to array of references
-        
+        let currentHueShift = 0;
+        let currentSaturation = 100;
+
         // DOM elements
         const uploadZone = document.getElementById('uploadZone');
         const fileInput = document.getElementById('fileInput');
@@ -477,6 +582,11 @@
         const heightInput = document.getElementById('heightInput');
         const updateDimensionsBtn = document.getElementById('updateDimensionsBtn');
         const startOverBtn = document.getElementById('startOverBtn');
+        const hueSlider = document.getElementById('hueSlider');
+        const saturationSlider = document.getElementById('saturationSlider');
+        const hueValue = document.getElementById('hueValue');
+        const saturationValue = document.getElementById('saturationValue');
+        const resetAdjustmentsBtn = document.getElementById('resetAdjustmentsBtn');
 
         // Event listeners
         uploadZone.addEventListener('click', () => fileInput.click());
@@ -527,6 +637,38 @@
         document.getElementById('resetColors').addEventListener('click', resetColors);
         updateDimensionsBtn.addEventListener('click', applyResize);
         startOverBtn.addEventListener('click', startOver);
+
+        // Hue and Saturation sliders
+        hueSlider.addEventListener('input', (e) => {
+            currentHueShift = parseInt(e.target.value);
+            hueValue.textContent = `${currentHueShift}°`;
+            applyGlobalColorAdjustments();
+        });
+
+        saturationSlider.addEventListener('input', (e) => {
+            currentSaturation = parseInt(e.target.value);
+            saturationValue.textContent = `${currentSaturation}%`;
+            applyGlobalColorAdjustments();
+        });
+
+        resetAdjustmentsBtn.addEventListener('click', () => {
+            hueSlider.value = 0;
+            saturationSlider.value = 100;
+            currentHueShift = 0;
+            currentSaturation = 100;
+            hueValue.textContent = '0°';
+            saturationValue.textContent = '100%';
+            applyGlobalColorAdjustments();
+        });
+
+        // Warn before leaving page if animation is loaded
+        window.addEventListener('beforeunload', (e) => {
+            if (lottieData) {
+                e.preventDefault();
+                e.returnValue = ''; // Required for Chrome
+                return ''; // Required for older browsers
+            }
+        });
 
         // Handle file upload
         async function handleFile(file) {
@@ -642,16 +784,16 @@
         function applyResize() {
             const newW = parseInt(widthInput.value);
             const newH = parseInt(heightInput.value);
-            
+
             if (isNaN(newW) || isNaN(newH)) return;
 
             const oldW = lottieData.w;
             const oldH = lottieData.h;
-            
+
             // Calculate offsets to keep content centered
             // If new is smaller, we shift content up/left (negative offset)
             // If new is larger, we shift content down/right (positive offset)
-            // Lottie (0,0) is top left. 
+            // Lottie (0,0) is top left.
             // Center X of old = oldW/2. Center X of new = newW/2.
             // We want old center to match new center.
             // Shift = NewCenter - OldCenter.
@@ -659,11 +801,13 @@
             const dx = (newW - oldW) / 2;
             const dy = (newH - oldH) / 2;
 
-            // Update global dimensions
+            // Update global dimensions in both lottieData and originalData
             lottieData.w = newW;
             lottieData.h = newH;
+            originalData.w = newW;
+            originalData.h = newH;
 
-            // Shift root layers
+            // Shift root layers in lottieData
             if (lottieData.layers) {
                 lottieData.layers.forEach(layer => {
                     // Only shift root layers (layers without parents) to avoid double shifting
@@ -671,7 +815,7 @@
 
                     // Skip cameras (type 13) if needed, but often cameras need shifting too.
                     // Let's assume we shift everything at root level.
-                    
+
                     if (layer.ks) {
                         // Handle Position
                         if (layer.ks.p) {
@@ -684,8 +828,26 @@
                                 shiftProperty(layer.ks.p, dx, dy);
                             }
                         }
-                        // Note: If 'p' is missing but 'a' (anchor point) exists, we generally don't touch anchor 
+                        // Note: If 'p' is missing but 'a' (anchor point) exists, we generally don't touch anchor
                         // for simple cropping, as we want to move the object, not its internal origin.
+                    }
+                });
+            }
+
+            // Also shift layers in originalData to preserve changes
+            if (originalData.layers) {
+                originalData.layers.forEach(layer => {
+                    if (layer.parent !== undefined) return;
+
+                    if (layer.ks) {
+                        if (layer.ks.p) {
+                            if (layer.ks.p.s) {
+                                if (layer.ks.x) shiftProperty(layer.ks.x, dx, 0);
+                                if (layer.ks.y) shiftProperty(layer.ks.y, dy, 0);
+                            } else {
+                                shiftProperty(layer.ks.p, dx, dy);
+                            }
+                        }
                     }
                 });
             }
@@ -746,6 +908,161 @@
                 parseInt(result[2], 16) / 255,
                 parseInt(result[3], 16) / 255
             ] : null;
+        }
+
+        // Convert RGB (0-1) to HSL
+        function rgbToHsl(r, g, b) {
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0; // achromatic
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+
+            return [h, s, l];
+        }
+
+        // Convert HSL to RGB (0-1)
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+
+            return [r, g, b];
+        }
+
+        // Apply global hue and saturation adjustments
+        function applyGlobalColorAdjustments() {
+            if (!originalData || !lottieData) return;
+
+            // Reset to original colors first
+            lottieData = JSON.parse(JSON.stringify(originalData));
+
+            // Apply adjustments if not at default values
+            if (currentHueShift !== 0 || currentSaturation !== 100) {
+                adjustAllColors(lottieData);
+            }
+
+            // Re-extract colors and update UI
+            extractColors();
+            renderPalette();
+            renderAnimation();
+        }
+
+        // Recursively adjust all colors in the data
+        function adjustAllColors(obj) {
+            if (!obj || typeof obj !== 'object') return;
+
+            // Handle solid colors
+            if (obj.hasOwnProperty('c') && obj.c && typeof obj.c === 'object') {
+                const colorObj = obj.c;
+
+                if (colorObj.k && Array.isArray(colorObj.k)) {
+                    // Static color
+                    if (typeof colorObj.k[0] === 'number' && colorObj.k.length >= 3) {
+                        adjustColor(colorObj.k);
+                    }
+                    // Animated color - keyframes
+                    else if (Array.isArray(colorObj.k)) {
+                        colorObj.k.forEach(keyframe => {
+                            if (keyframe.s && Array.isArray(keyframe.s)) {
+                                adjustColor(keyframe.s);
+                            }
+                            if (keyframe.e && Array.isArray(keyframe.e)) {
+                                adjustColor(keyframe.e);
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Handle gradient colors
+            if (obj.hasOwnProperty('g') && obj.g && obj.g.k) {
+                const gradientData = obj.g.k;
+                if (gradientData.k && Array.isArray(gradientData.k)) {
+                    const numColors = obj.g.p || 2;
+
+                    // Static gradient
+                    if (typeof gradientData.k[0] === 'number') {
+                        adjustGradientColors(gradientData.k, numColors);
+                    }
+                    // Animated gradient
+                    else if (Array.isArray(gradientData.k)) {
+                        gradientData.k.forEach(keyframe => {
+                            if (keyframe.s && Array.isArray(keyframe.s)) {
+                                adjustGradientColors(keyframe.s, numColors);
+                            }
+                            if (keyframe.e && Array.isArray(keyframe.e)) {
+                                adjustGradientColors(keyframe.e, numColors);
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Recurse
+            for (const key in obj) {
+                if (obj.hasOwnProperty(key) && typeof obj[key] === 'object') {
+                    adjustAllColors(obj[key]);
+                }
+            }
+        }
+
+        function adjustColor(colorArr) {
+            if (colorArr.length < 3) return;
+
+            const [r, g, b] = colorArr;
+            let [h, s, l] = rgbToHsl(r, g, b);
+
+            // Apply hue shift (-180 to 180 degrees)
+            h = (h + currentHueShift / 360) % 1;
+            if (h < 0) h += 1;
+
+            // Apply saturation adjustment (0 to 200%)
+            s = Math.max(0, Math.min(1, s * (currentSaturation / 100)));
+
+            const [newR, newG, newB] = hslToRgb(h, s, l);
+            colorArr[0] = newR;
+            colorArr[1] = newG;
+            colorArr[2] = newB;
+        }
+
+        function adjustGradientColors(arr, numColors) {
+            for (let i = 0; i < numColors && (i * 4 + 3) < arr.length; i++) {
+                const offset = i * 4;
+                const colorSlice = [arr[offset + 1], arr[offset + 2], arr[offset + 3]];
+                adjustColor(colorSlice);
+                arr[offset + 1] = colorSlice[0];
+                arr[offset + 2] = colorSlice[1];
+                arr[offset + 3] = colorSlice[2];
+            }
         }
 
         // Extract all colors from Lottie data
@@ -849,10 +1166,10 @@
             colorMap.forEach((refs, hex) => {
                 const item = document.createElement('div');
                 item.className = 'color-item';
-                
+
                 const alpha = refs[0]?.colorArr?.[3];
                 const hasAlpha = typeof alpha === 'number' && alpha < 1;
-                
+
                 item.innerHTML = `
                     <div class="color-preview-row">
                         <div class="color-picker-wrapper">
@@ -861,40 +1178,77 @@
                             </div>
                             <input type="color" value="${hex}">
                         </div>
-                        <div class="color-info">
-                            <span class="color-hex">${hex}</span>
-                            <span class="color-count">${refs.length} instance${refs.length > 1 ? 's' : ''}</span>
-                        </div>
+                        <input type="text" class="color-hex-input" value="${hex}" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$">
                     </div>
+                    <span class="color-count">${refs.length} instance${refs.length > 1 ? 's' : ''}</span>
                 `;
 
                 const colorInput = item.querySelector('input[type="color"]');
+                const hexInput = item.querySelector('.color-hex-input');
                 const swatchInner = item.querySelector('.color-swatch-inner');
-                const hexLabel = item.querySelector('.color-hex');
 
-                // INPUT EVENT: Fires while dragging.
-                colorInput.addEventListener('input', (e) => {
-                    const newHex = e.target.value;
-                    
-                    // 1. Update visual feedback immediately
-                    swatchInner.style.backgroundColor = newHex;
-                    hexLabel.textContent = newHex;
+                // Function to update all visuals and data
+                const updateColor = (newHex) => {
+                    // Validate hex format
+                    if (!/^#[0-9A-Fa-f]{6}$/i.test(newHex)) return;
 
-                    // 2. Update the actual Lottie data structure references
-                    updateLottieValues(hex, newHex);
+                    const normalizedHex = newHex.toUpperCase();
 
-                    // 3. Re-render the animation canvas
+                    // Update visual feedback immediately
+                    swatchInner.style.backgroundColor = normalizedHex;
+                    hexInput.value = normalizedHex;
+                    colorInput.value = normalizedHex;
+
+                    // Update the actual Lottie data structure references
+                    updateLottieValues(hex, normalizedHex);
+
+                    // Re-render the animation canvas
                     renderAnimation();
+
+                    return normalizedHex;
+                };
+
+                // Color picker input event
+                colorInput.addEventListener('input', (e) => {
+                    updateColor(e.target.value);
                 });
 
-                // CHANGE EVENT: Fires when user releases mouse/commits value.
+                // Color picker change event
                 colorInput.addEventListener('change', (e) => {
-                    const newHex = e.target.value;
-                    
-                    // 4. Update the Color Map structure (handle merging if new color exists)
+                    const newHex = e.target.value.toUpperCase();
                     if (hex !== newHex) {
                         updateColorMapStructure(hex, newHex);
-                        renderPalette(); // Re-build grid to show new state
+                        renderPalette();
+                    }
+                });
+
+                // Hex input change event
+                hexInput.addEventListener('input', (e) => {
+                    const value = e.target.value.toUpperCase();
+                    if (value.startsWith('#') && value.length === 7) {
+                        updateColor(value);
+                    }
+                });
+
+                hexInput.addEventListener('blur', (e) => {
+                    let value = e.target.value.toUpperCase();
+
+                    // Auto-add # if missing
+                    if (!value.startsWith('#')) {
+                        value = '#' + value;
+                    }
+
+                    // Validate and update
+                    if (/^#[0-9A-Fa-f]{6}$/i.test(value)) {
+                        const normalizedHex = value.toUpperCase();
+                        if (hex !== normalizedHex) {
+                            updateColor(normalizedHex);
+                            updateColorMapStructure(hex, normalizedHex);
+                            renderPalette();
+                        }
+                    } else {
+                        // Reset to original if invalid
+                        hexInput.value = hex;
                     }
                 });
 
@@ -982,17 +1336,27 @@
         // Download as .lottie (zip)
         async function downloadAsLottie() {
             const zip = new JSZip();
-            
-            const manifest = {
-                animations: [{ id: 'animation.json' }],
-                version: '1.0',
-                generator: 'Lottie Color Editor'
-            };
-            
-            zip.file('manifest.json', JSON.stringify(manifest, null, 2));
-            zip.file('animation.json', JSON.stringify(lottieData, null, 2));
 
-            const blob = await zip.generateAsync({ type: 'blob' });
+            const manifest = {
+                version: '1.0',
+                revision: 1,
+                author: 'Lottie Color Editor',
+                generator: 'Lottie Color Editor',
+                animations: [{
+                    id: 'animation'
+                }]
+            };
+
+            zip.file('manifest.json', JSON.stringify(manifest));
+            zip.file('animations/animation.json', JSON.stringify(lottieData));
+
+            const blob = await zip.generateAsync({
+                type: 'blob',
+                compression: 'DEFLATE',
+                compressionOptions: {
+                    level: 6
+                }
+            });
             downloadBlob(blob, `${originalFileName}-edited.lottie`);
         }
 
