@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottie Color Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .subtitle {
+            color: #888;
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone {
+            border: 2px dashed #333;
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #1a1a1a;
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #666;
+            background: #222;
+        }
+
+        .upload-zone svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .upload-zone p {
+            color: #888;
+        }
+
+        .upload-zone span {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .editor {
+            display: none;
+            gap: 2rem;
+        }
+
+        .editor.active {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        @media (max-width: 800px) {
+            .editor.active {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .preview-panel {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .panel-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .file-name {
+            font-size: 0.875rem;
+            color: #888;
+        }
+
+        #lottieContainer {
+            background: #fff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        #lottieContainer.checkerboard {
+            background-image: 
+                linear-gradient(45deg, #ccc 25%, transparent 25%),
+                linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #ccc 75%),
+                linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        .palette-panel {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .section-header {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #888;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .resize-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .input-group input {
+            background: #252525;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .color-item {
+            background: #252525;
+            border-radius: 8px;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .color-preview-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .color-swatch {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            border: 2px solid #444;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .color-swatch::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(45deg, #666 25%, transparent 25%),
+                linear-gradient(-45deg, #666 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #666 75%),
+                linear-gradient(-45deg, transparent 75%, #666 75%);
+            background-size: 8px 8px;
+            background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+            z-index: 0;
+        }
+
+        .color-swatch-inner {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            transition: background-color 0.1s;
+        }
+
+        .color-swatch:hover {
+            border-color: #666;
+        }
+
+        .color-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .color-hex {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .color-count {
+            font-size: 0.7rem;
+            color: #666;
+        }
+
+        .color-picker-wrapper {
+            position: relative;
+        }
+
+        .color-picker-wrapper input[type="color"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            border-top: 1px solid #333;
+            padding-top: 1.5rem;
+            margin-top: auto;
+        }
+
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        button.secondary {
+            background: #333;
+        }
+
+        button.secondary:hover {
+            background: #444;
+        }
+
+        button.small {
+            padding: 0.5rem 1rem;
+            width: 100%;
+        }
+
+        button.danger {
+            background: transparent;
+            border: 1px solid #444;
+            color: #888;
+        }
+
+        button.danger:hover {
+            background: #2a1111;
+            border-color: #662222;
+            color: #ff6b6b;
+        }
+
+        .bg-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #888;
+        }
+
+        .toggle-switch {
+            width: 40px;
+            height: 22px;
+            background: #333;
+            border-radius: 11px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle-switch.active {
+            background: #3b82f6;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(18px);
+        }
+
+        .empty-palette {
+            text-align: center;
+            color: #666;
+            padding: 2rem;
+            grid-column: 1 / -1;
+        }
+
+        .playback-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .playback-controls button {
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lottie Color Editor</h1>
+        <p class="subtitle">Upload a .json or .lottie file to edit colors</p>
+
+        <div class="upload-zone" id="uploadZone">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p>Drop your Lottie file here or <span>browse</span></p>
+            <p style="font-size: 0.875rem; margin-top: 0.5rem;">.json or .lottie files</p>
+            <input type="file" id="fileInput" accept=".json,.lottie">
+        </div>
+
+        <div class="editor" id="editor">
+            <div class="preview-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Preview</span>
+                    <span class="file-name" id="fileName"></span>
+                </div>
+                <div id="lottieContainer" class="checkerboard"></div>
+                <div class="playback-controls">
+                    <button class="secondary" id="playPauseBtn">Pause</button>
+                    <button class="secondary" id="restartBtn">Restart</button>
+                    <div class="bg-toggle" style="margin-left: auto;">
+                        <span>Transparency grid</span>
+                        <div class="toggle-switch" id="bgToggle"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="palette-panel">
+                
+                <!-- Resize Section -->
+                <div>
+                    <div class="section-header">Dimensions & Crop</div>
+                    <div class="resize-grid">
+                        <div class="input-group">
+                            <label>Width (px)</label>
+                            <input type="number" id="widthInput">
+                        </div>
+                        <div class="input-group">
+                            <label>Height (px)</label>
+                            <input type="number" id="heightInput">
+                        </div>
+                    </div>
+                    <button class="secondary small" id="updateDimensionsBtn">Update Dimensions (Center Content)</button>
+                </div>
+
+                <!-- Colors Section -->
+                <div>
+                    <div class="panel-header" style="margin-bottom: 0.5rem;">
+                        <span class="section-header" style="margin:0;">Color Palette</span>
+                        <span id="colorCount" style="font-size: 0.75rem; color: #666;"></span>
+                    </div>
+
+                    <div class="palette-grid" id="paletteGrid">
+                        <div class="empty-palette">No colors found</div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="downloadJson">Download .json</button>
+                    <button id="downloadLottie">Download .lottie</button>
+                    <button class="secondary" id="resetColors">Reset Colors</button>
+                    <button class="danger" id="startOverBtn" style="margin-left: auto;">Start Over</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let originalData = null;
+        let lottieData = null;
+        let lottieAnimation = null;
+        let originalFileName = 'animation';
+        let colorMap = new Map(); // Maps hex color to array of references
+        
+        // DOM elements
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const editor = document.getElementById('editor');
+        const lottieContainer = document.getElementById('lottieContainer');
+        const paletteGrid = document.getElementById('paletteGrid');
+        const fileName = document.getElementById('fileName');
+        const colorCount = document.getElementById('colorCount');
+        const bgToggle = document.getElementById('bgToggle');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const widthInput = document.getElementById('widthInput');
+        const heightInput = document.getElementById('heightInput');
+        const updateDimensionsBtn = document.getElementById('updateDimensionsBtn');
+        const startOverBtn = document.getElementById('startOverBtn');
+
+        // Event listeners
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        });
+
+        bgToggle.addEventListener('click', () => {
+            bgToggle.classList.toggle('active');
+            lottieContainer.classList.toggle('checkerboard', bgToggle.classList.contains('active'));
+        });
+
+        playPauseBtn.addEventListener('click', () => {
+            if (lottieAnimation) {
+                if (lottieAnimation.isPaused) {
+                    lottieAnimation.play();
+                    playPauseBtn.textContent = 'Pause';
+                } else {
+                    lottieAnimation.pause();
+                    playPauseBtn.textContent = 'Play';
+                }
+            }
+        });
+
+        restartBtn.addEventListener('click', () => {
+            if (lottieAnimation) {
+                lottieAnimation.goToAndPlay(0);
+                playPauseBtn.textContent = 'Pause';
+            }
+        });
+
+        document.getElementById('downloadJson').addEventListener('click', downloadAsJson);
+        document.getElementById('downloadLottie').addEventListener('click', downloadAsLottie);
+        document.getElementById('resetColors').addEventListener('click', resetColors);
+        updateDimensionsBtn.addEventListener('click', applyResize);
+        startOverBtn.addEventListener('click', startOver);
+
+        // Handle file upload
+        async function handleFile(file) {
+            originalFileName = file.name.replace(/\.(json|lottie)$/i, '');
+            fileName.textContent = file.name;
+
+            try {
+                let animationJsonContent = null;
+
+                if (file.name.endsWith('.lottie')) {
+                    const zip = await JSZip.loadAsync(file);
+                    
+                    // 1. Try to read manifest.json to find the entry point
+                    const manifestFile = zip.file('manifest.json');
+                    
+                    if (manifestFile) {
+                        try {
+                            const manifestText = await manifestFile.async('text');
+                            const manifest = JSON.parse(manifestText);
+                            // Standard lottie usually puts animations in animations/ folder
+                            // manifest id usually points to it
+                            let animPath = manifest.animations?.[0]?.id;
+                            
+                            if (animPath) {
+                                // Try finding file directly
+                                let entry = zip.file(animPath);
+                                // Try finding in animations folder
+                                if (!entry) entry = zip.file(`animations/${animPath}`);
+                                // Try adding json extension
+                                if (!entry) entry = zip.file(`animations/${animPath}.json`);
+                                
+                                if (entry) {
+                                    animationJsonContent = await entry.async('text');
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("Error parsing manifest, falling back to scanning json files");
+                        }
+                    }
+
+                    // 2. Fallback: Find the first JSON that IS NOT manifest.json
+                    if (!animationJsonContent) {
+                        const jsonFiles = zip.file(/\.json$/i);
+                        const animFile = jsonFiles.find(f => !f.name.endsWith('manifest.json'));
+                        if (animFile) {
+                            animationJsonContent = await animFile.async('text');
+                        }
+                    }
+
+                    if (!animationJsonContent) {
+                        throw new Error("No valid animation JSON found inside .lottie file");
+                    }
+
+                    lottieData = JSON.parse(animationJsonContent);
+                    
+                } else {
+                    const text = await file.text();
+                    lottieData = JSON.parse(text);
+                }
+
+                originalData = JSON.parse(JSON.stringify(lottieData));
+                initEditor();
+            } catch (err) {
+                console.error('Error loading file:', err);
+                alert('Error loading file. Please make sure it\'s a valid Lottie file.');
+            }
+        }
+
+        // Initialize editor
+        function initEditor() {
+            editor.classList.add('active');
+            uploadZone.style.display = 'none';
+            
+            // Init dimensions
+            widthInput.value = lottieData.w;
+            heightInput.value = lottieData.h;
+
+            extractColors();
+            renderPalette();
+            renderAnimation();
+        }
+
+        // Reset App State
+        function startOver() {
+            if (confirm('Are you sure you want to start over? Any unsaved changes will be lost.')) {
+                // Destroy animation
+                if (lottieAnimation) {
+                    lottieAnimation.destroy();
+                    lottieAnimation = null;
+                }
+
+                // Reset state
+                originalData = null;
+                lottieData = null;
+                colorMap.clear();
+                originalFileName = 'animation';
+
+                // UI Reset
+                editor.classList.remove('active');
+                uploadZone.style.display = 'block';
+                uploadZone.classList.remove('dragover');
+                fileInput.value = ''; // Important to allow re-selecting same file
+                paletteGrid.innerHTML = '<div class="empty-palette">No colors found</div>';
+                colorCount.textContent = '';
+                fileName.textContent = '';
+                lottieContainer.innerHTML = '';
+                widthInput.value = '';
+                heightInput.value = '';
+            }
+        }
+
+        // Logic for resizing and centering logic
+        function applyResize() {
+            const newW = parseInt(widthInput.value);
+            const newH = parseInt(heightInput.value);
+            
+            if (isNaN(newW) || isNaN(newH)) return;
+
+            const oldW = lottieData.w;
+            const oldH = lottieData.h;
+            
+            // Calculate offsets to keep content centered
+            // If new is smaller, we shift content up/left (negative offset)
+            // If new is larger, we shift content down/right (positive offset)
+            // Lottie (0,0) is top left. 
+            // Center X of old = oldW/2. Center X of new = newW/2.
+            // We want old center to match new center.
+            // Shift = NewCenter - OldCenter.
+            // e.g. 1000w -> 500w. Shift = 250 - 500 = -250.
+            const dx = (newW - oldW) / 2;
+            const dy = (newH - oldH) / 2;
+
+            // Update global dimensions
+            lottieData.w = newW;
+            lottieData.h = newH;
+
+            // Shift root layers
+            if (lottieData.layers) {
+                lottieData.layers.forEach(layer => {
+                    // Only shift root layers (layers without parents) to avoid double shifting
+                    if (layer.parent !== undefined) return;
+
+                    // Skip cameras (type 13) if needed, but often cameras need shifting too.
+                    // Let's assume we shift everything at root level.
+                    
+                    if (layer.ks) {
+                        // Handle Position
+                        if (layer.ks.p) {
+                            if (layer.ks.p.s) {
+                                // Split dimensions (separate x and y properties)
+                                if (layer.ks.x) shiftProperty(layer.ks.x, dx, 0);
+                                if (layer.ks.y) shiftProperty(layer.ks.y, dy, 0); // Correct: Pass dy as the 'delta' for the single value logic
+                            } else {
+                                // Combined dimensions ([x,y,z])
+                                shiftProperty(layer.ks.p, dx, dy);
+                            }
+                        }
+                        // Note: If 'p' is missing but 'a' (anchor point) exists, we generally don't touch anchor 
+                        // for simple cropping, as we want to move the object, not its internal origin.
+                    }
+                });
+            }
+
+            renderAnimation();
+        }
+
+        function shiftProperty(prop, dx, dy = 0) {
+            // Case 1: Static value
+            // Can be number (rare for position) or array [x,y,z]
+            if (typeof prop.k === 'number') {
+                prop.k += dx; // This handles the single axis case (like Split X) where we pass dx as the main delta
+            } 
+            else if (Array.isArray(prop.k) && typeof prop.k[0] === 'number') {
+                // [x, y, z]
+                prop.k[0] += dx;
+                if (prop.k.length > 1) prop.k[1] += dy;
+            }
+            // Case 2: Keyframes
+            else if (Array.isArray(prop.k) && prop.k[0] && typeof prop.k[0] === 'object') {
+                prop.k.forEach(key => {
+                    // Start value (s)
+                    if (key.s) {
+                        if (Array.isArray(key.s)) {
+                            key.s[0] += dx;
+                            if (key.s.length > 1) key.s[1] += dy;
+                        } else if (typeof key.s === 'number') {
+                            key.s += dx;
+                        }
+                    }
+                    // End value (e) - sometimes absent in hold keyframes
+                    if (key.e) {
+                        if (Array.isArray(key.e)) {
+                            key.e[0] += dx;
+                            if (key.e.length > 1) key.e[1] += dy;
+                        } else if (typeof key.e === 'number') {
+                            key.e += dx;
+                        }
+                    }
+                });
+            }
+        }
+
+        // Convert RGB array (0-1) to hex
+        function rgbToHex(r, g, b) {
+            const toHex = (n) => {
+                const val = Math.round(Math.min(1, Math.max(0, n)) * 255);
+                return val.toString(16).padStart(2, '0');
+            };
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+        }
+
+        // Convert hex to RGB array (0-1)
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? [
+                parseInt(result[1], 16) / 255,
+                parseInt(result[2], 16) / 255,
+                parseInt(result[3], 16) / 255
+            ] : null;
+        }
+
+        // Extract all colors from Lottie data
+        function extractColors() {
+            colorMap.clear();
+
+            function traverse(obj, path = []) {
+                if (!obj || typeof obj !== 'object') return;
+
+                // Check for color property
+                if (obj.hasOwnProperty('c') && obj.c && typeof obj.c === 'object') {
+                    const colorObj = obj.c;
+                    
+                    // Static color
+                    if (colorObj.k && Array.isArray(colorObj.k)) {
+                        if (typeof colorObj.k[0] === 'number' && colorObj.k.length >= 3) {
+                            addColorReference(colorObj.k, colorObj, 'k');
+                        }
+                        // Animated color - keyframes
+                        else if (Array.isArray(colorObj.k) && colorObj.k[0] && typeof colorObj.k[0] === 'object') {
+                            colorObj.k.forEach((keyframe, i) => {
+                                if (keyframe.s && Array.isArray(keyframe.s) && keyframe.s.length >= 3) {
+                                    addColorReference(keyframe.s, keyframe, 's');
+                                }
+                                if (keyframe.e && Array.isArray(keyframe.e) && keyframe.e.length >= 3) {
+                                    addColorReference(keyframe.e, keyframe, 'e');
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Check for gradient colors
+                if (obj.hasOwnProperty('g') && obj.g && obj.g.k) {
+                    const gradientData = obj.g.k;
+                    if (gradientData.k && Array.isArray(gradientData.k)) {
+                        // Static gradient
+                        if (typeof gradientData.k[0] === 'number') {
+                            extractGradientColors(gradientData.k, gradientData, 'k', obj.g.p || 2);
+                        }
+                        // Animated gradient
+                        else if (Array.isArray(gradientData.k)) {
+                            gradientData.k.forEach((keyframe) => {
+                                if (keyframe.s && Array.isArray(keyframe.s)) {
+                                    extractGradientColors(keyframe.s, keyframe, 's', obj.g.p || 2);
+                                }
+                                if (keyframe.e && Array.isArray(keyframe.e)) {
+                                    extractGradientColors(keyframe.e, keyframe, 'e', obj.g.p || 2);
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Recurse
+                for (const key in obj) {
+                    if (obj.hasOwnProperty(key) && typeof obj[key] === 'object') {
+                        traverse(obj[key], [...path, key]);
+                    }
+                }
+            }
+
+            function extractGradientColors(arr, parent, key, numColors) {
+                // Gradient format: [stop1, r1, g1, b1, stop2, r2, g2, b2, ...]
+                for (let i = 0; i < numColors && (i * 4 + 3) < arr.length; i++) {
+                    const offset = i * 4;
+                    const r = arr[offset + 1];
+                    const g = arr[offset + 2];
+                    const b = arr[offset + 3];
+                    if (typeof r === 'number' && typeof g === 'number' && typeof b === 'number') {
+                        addColorReference([r, g, b], { arr, offset, parent, key }, 'gradient');
+                    }
+                }
+            }
+
+            function addColorReference(colorArr, parent, key) {
+                const hex = rgbToHex(colorArr[0], colorArr[1], colorArr[2]);
+                
+                if (!colorMap.has(hex)) {
+                    colorMap.set(hex, []);
+                }
+                
+                colorMap.get(hex).push({ parent, key, colorArr });
+            }
+
+            traverse(lottieData);
+        }
+
+        // Render color palette
+        function renderPalette() {
+            if (colorMap.size === 0) {
+                paletteGrid.innerHTML = '<div class="empty-palette">No colors found in this animation</div>';
+                colorCount.textContent = '';
+                return;
+            }
+
+            colorCount.textContent = `${colorMap.size} unique colors`;
+            paletteGrid.innerHTML = '';
+
+            // Sort colors by brightness or hue optionally, currently just iteration order
+            colorMap.forEach((refs, hex) => {
+                const item = document.createElement('div');
+                item.className = 'color-item';
+                
+                const alpha = refs[0]?.colorArr?.[3];
+                const hasAlpha = typeof alpha === 'number' && alpha < 1;
+                
+                item.innerHTML = `
+                    <div class="color-preview-row">
+                        <div class="color-picker-wrapper">
+                            <div class="color-swatch">
+                                <div class="color-swatch-inner" style="background-color: ${hex}${hasAlpha ? Math.round(alpha * 255).toString(16).padStart(2, '0') : ''}"></div>
+                            </div>
+                            <input type="color" value="${hex}">
+                        </div>
+                        <div class="color-info">
+                            <span class="color-hex">${hex}</span>
+                            <span class="color-count">${refs.length} instance${refs.length > 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+                `;
+
+                const colorInput = item.querySelector('input[type="color"]');
+                const swatchInner = item.querySelector('.color-swatch-inner');
+                const hexLabel = item.querySelector('.color-hex');
+
+                // INPUT EVENT: Fires while dragging.
+                colorInput.addEventListener('input', (e) => {
+                    const newHex = e.target.value;
+                    
+                    // 1. Update visual feedback immediately
+                    swatchInner.style.backgroundColor = newHex;
+                    hexLabel.textContent = newHex;
+
+                    // 2. Update the actual Lottie data structure references
+                    updateLottieValues(hex, newHex);
+
+                    // 3. Re-render the animation canvas
+                    renderAnimation();
+                });
+
+                // CHANGE EVENT: Fires when user releases mouse/commits value.
+                colorInput.addEventListener('change', (e) => {
+                    const newHex = e.target.value;
+                    
+                    // 4. Update the Color Map structure (handle merging if new color exists)
+                    if (hex !== newHex) {
+                        updateColorMapStructure(hex, newHex);
+                        renderPalette(); // Re-build grid to show new state
+                    }
+                });
+
+                paletteGrid.appendChild(item);
+            });
+        }
+
+        function updateLottieValues(oldHex, newHex) {
+            const refs = colorMap.get(oldHex);
+            if (!refs) return;
+
+            const newRgb = hexToRgb(newHex);
+            if (!newRgb) return;
+
+            refs.forEach(ref => {
+                if (ref.key === 'gradient') {
+                    // Handle gradient colors
+                    const { arr, offset } = ref.parent;
+                    arr[offset + 1] = newRgb[0];
+                    arr[offset + 2] = newRgb[1];
+                    arr[offset + 3] = newRgb[2];
+                } else {
+                    // Handle regular colors
+                    const colorArr = ref.parent[ref.key];
+                    if (colorArr && colorArr.length >= 3) {
+                        colorArr[0] = newRgb[0];
+                        colorArr[1] = newRgb[1];
+                        colorArr[2] = newRgb[2];
+                    }
+                }
+            });
+        }
+
+        function updateColorMapStructure(oldHex, newHex) {
+            const refs = colorMap.get(oldHex);
+            if (!refs) return;
+
+            // Remove old entry
+            colorMap.delete(oldHex);
+
+            // Add or Merge into new entry
+            if (colorMap.has(newHex)) {
+                // Merge references
+                const existingRefs = colorMap.get(newHex);
+                colorMap.set(newHex, [...existingRefs, ...refs]);
+            } else {
+                // Create new
+                colorMap.set(newHex, refs);
+            }
+        }
+
+        // Reset all colors to original
+        function resetColors() {
+            if (!originalData) return;
+            lottieData = JSON.parse(JSON.stringify(originalData));
+            initEditor(); // Re-init to reset dimensions inputs too
+        }
+
+        // Render Lottie animation
+        function renderAnimation() {
+            if (lottieAnimation) {
+                lottieAnimation.destroy();
+            }
+
+            lottieContainer.innerHTML = '';
+            
+            lottieAnimation = lottie.loadAnimation({
+                container: lottieContainer,
+                renderer: 'svg',
+                loop: true,
+                autoplay: true,
+                animationData: JSON.parse(JSON.stringify(lottieData))
+            });
+
+            playPauseBtn.textContent = 'Pause';
+        }
+
+        // Download as JSON
+        function downloadAsJson() {
+            const json = JSON.stringify(lottieData, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            downloadBlob(blob, `${originalFileName}-edited.json`);
+        }
+
+        // Download as .lottie (zip)
+        async function downloadAsLottie() {
+            const zip = new JSZip();
+            
+            const manifest = {
+                animations: [{ id: 'animation.json' }],
+                version: '1.0',
+                generator: 'Lottie Color Editor'
+            };
+            
+            zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+            zip.file('animation.json', JSON.stringify(lottieData, null, 2));
+
+            const blob = await zip.generateAsync({ type: 'blob' });
+            downloadBlob(blob, `${originalFileName}-edited.lottie`);
+        }
+
+        // Helper to download blob
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
