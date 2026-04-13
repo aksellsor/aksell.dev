@@ -14,6 +14,12 @@
 
 ### Code to know
 
+## Astro environment variables from 1password
+```bash
+  CLOUDFLARE_INCLUDE_PROCESS_ENV=true op run --environment=<1password-env-id> astro dev   
+```
+
+
 ## Custom Umbraco Preview Button
 
 ```js
